@@ -1,0 +1,268 @@
+Documentation:
+
+myLib.py:
+
+MySprite:
+a classic sprite with an image, width, height, x, y, dx, dy, ddx, ddy,
+velocity, visible type, border, and boundary condition. Some things I added
+since I had physics sandbox in mind was previous position - (px,py), mass (m),
+and energy. The screen is a reference to the screen that we write to.
+
+doVecs() - calculates velocity and acceleration vectors, and the energy
+setDim() - sets the size of the guy. Radius is interpretted and you can make they
+        sprite a "circle", no functionality was written for the sprite being a
+        circle, but the idea was for collisions in the future
+checkBounds() - This does boundary conditions, if it reaches the edge of the screen,
+        how do we operate? To handle this, we have 4 ones, Die/Kill(-1),
+        Accelerated  Bounce (0), Traditional bounce (1), and wrap (2).
+        Kill sets the guy to invisible, accelerated bounce reflects the direction
+        of the velocity and acceleration, traditional bounce only reflects the
+        direction of the velocity, and wrap wraps the guy from one edge to the
+        other (Wrap doesnt work as of yet, but it doesn't need to for what I have)
+simpleCollision() - is this sprite inside the other passed in sprite
+spawn() - makes the instance visible off screen
+brownian() - moves the sprite according to brownian motion
+dpos() - changes the position by some small value
+update() - does all the necessary updating - doVecs, checkBounds, move, and draw
+
+Circle:
+Extension of MySprite class for circular cellular based objects
+
+closeToCell() - within the radius of itself and the cellular radius combined
+checkOther() - takes a list of objects and determines if its close to something
+    in the list and moves it so that its not close to that something
+checkOtherSingle() - same as checkOther() but for an individual guy fed in
+
+
+Cell:
+Extension of MySprite. Contains lists of every game element so that we can
+easily reference throughout any other class. The cell really doesn't do anything
+in this, pretty much just a glorified counter of different things that links
+to everything else. Also used for vescicles so that's the most interesting
+thing in this guy.
+
+Cells count - num bacteria killed, residues/vesicle, residues, rna, hp, atp,
+
+upSuck() - if vesicle and close to the cell, the vesicle merges with the cell
+    and gives the cell some residues
+incSize/decSize() - increases/decreases size of the cell
+selfAlive() - counts amount of residues, rna, and atp alive
+draw() - draws self and a border around it
+
+
+Bact:
+Bacteria that try to kill the cell.
+
+destroy() - kills the bacteria and makes a vesicles in its place
+makeSelf() - initializes the bacteria instance
+calcSurr() - calculates the amount that it surrounds the cell,
+    if its great enough, kill the cell and end the game
+checkGuys() - makes sure it doesn't run into Bacteria, Viruses, or vesicles
+checkLatch() - if close to cell, latch to it, if not that close but close enough,
+    go towards the cell
+brownian() - same brownian, except we can go towards the cell now
+draw() - draws a circle, also draws an arc if surroudning the cell at all
+
+Virus:
+An element that has RNA inside that will attach to the cell if it gets near
+and inject the RNA. Once RNA is gone into the cell, it will leave.
+
+makePoint() - updates the points of the polygon according to its new position
+getShape() - determines what the shape of the polygon should be
+checkLatch() - close to cell, latch to cell. If it has no more RNA, unlatch
+brownian() - if has RNA, same old brownian boy, if doesn't have RNA, run away
+    from the cell
+addRna() - adds RNA to the cell
+putRna() - makes the RNA's at random positions inside the virus
+makeSelf() - initializes the bacteria to be alive
+
+
+Atp:
+A small blue ball that just kinda runs around and attaches to proteins
+
+goWithProt() - if attached to a protein, set position to same as proetin
+checkLatchProt() - if its close to a protein, latch to that protein
+checkCell() - keeps it inside the cell
+checkSelf() - checks the cell, and keeps out of nucleus, ER, and Mito
+checkOrganelle() - keeps it outside of an organelle
+brownian() - if Atp isn't latched or looking for a protein, check to see if there
+    is a protein nearby to attach to. If there isn't a protein nearby to attach
+    to just do regular brownian boy. If there is a protein nearby without all
+    of its ATP, then go towards that protein. Then just go with protein if we
+    are latched
+kicker() - kicks the ATP away from its current position if it gets in an
+    an unfortunate position
+isIn() - is the ATP inside an organelle
+badBound() - kicks the ATP outside of a region if its not in a good position
+
+
+Nucleus:
+Makes Rna that the User chooses to make
+
+produceRna() - checks if we selected something to make, can make it, and
+    proper amount of time to make it has passed. If so - make the Rna
+getTimeTill() - returns amount of time remaining for Rna to be made
+checkCell() - keeps it inside the cell
+checkOrganelle() - keeps it outside of an organelle
+checkSelf() - checks the cell, and keeps out of nucleus and Mito
+
+
+Endo:
+Takes in RNA and then makes proteins
+Special note, uses a Queue for the productions of the ER
+
+checkCell() - keeps it inside the cell
+checkOrganelle() - keeps it outside of an organelle
+checkSelf() - checks the cell, and keeps out of nucleus and Mito
+rnaEnter() - if an Rna enters, add it to the queue
+selProd() - selects the type of protein to make
+produceProt() - makes a protein if the necessary conditions have been met
+
+
+Mito:
+Makes ATP
+
+produce() - makes an Atp
+makeNAtp() - if protein tells it to make n atp, the mito will then make that
+    many atps
+
+
+Protein:
+Proteins are the crux of this game. Proteins do the job of keeping it interesting,
+there are many different kinds of proteins: Membrane Bound, Enzymes, and mAbs.
+Each protein also has a chance to become disordered and thus attack the cell
+
+getShape() - gets the shape for the polygon to be drawn
+makeSelf() - initializes the proteins according to type
+doJob() - checks if the protein can do what it is intended to do - atp exists,
+    refractory period is complete.
+    flippase: increases the outer protection
+    floppase: decreases outer protection
+    signalling: Cannot be done here, requires user input
+    protein enzyme: if close to protein, kill said protein and harvest
+    rna enzyme: if close to rna, kill said rna and harvest
+    lipid enzyme: if attached to membrane, decrease cell size if can decrease size
+    mAb A: if close to rna from virus A, kill rna
+    mAb B: if close to rna from virus B, kill rna
+    mAb C: if close to rna from virus C, kill rna
+    evil: if close to Nucleus, attack nucleus
+explode() - if we can explode, then EXPLODEEEE
+checkEvil() - checks to see if the protein has become disordered and "evil"
+addAtp() - adds atp to the list
+closeTo [thing] () - checks to see if the protein is close to [thing]
+killAtp() - removes all Atp from the list and kills them
+checkLatch() - if close enough to membrane and is membrane protein, latch to it
+makePoint() - updates polygon points accordingly
+isAtpFull() - if all ATP have filled the protein
+brownian() - This guy is super ugly, but here's the basic idea
+    if the protein has something that it is looking for, we check if such thing
+    is close enough to the protein that we go towards that thing of interest.
+    Otherwise we just do our typical brownian motion
+
+Explosion:
+An instance that is used by the signalling protein
+
+explode() - makes the boolean values for exploding true
+stillSplodin() - increases the radius until maxRadius, then disappears
+closeToBact() - if the explosion touches a bacteria, then kill the bacteria
+
+
+Rect:
+Creates a rectangle, filled or empty
+
+fill() + empty() - sets the filled-ness of the rectangle, False = filled,
+    True = unfilled
+
+Arc:
+Creates an arc, not actually used since required too much actual work to maintain
+
+
+Line:
+Basis for the Rna class. It creates a line from xo,yo to xf,yf.
+
+calcPos() - given angle and initial position, calculates xf,yf
+calcAng() - given xo,yo and xf,yf, calculates angle
+
+
+Rna:
+This is a line that just randomly moves about the cell until it hits the ER
+
+brownian() - if its a virus rna and virus is latched, rna goes towards the cell
+    if its virus but not latched, just meander about the virus, if its in the
+    cell just wander around. The wandering is moving forward and adding a small
+    angle to it to give it some wiggling behavior
+checkCell() - if its in the cell, keep it there. if its in the virus, keep
+    it there. If its in a virus and latched, keep it in either of them
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+main.py
+
+This is where the implementation of the myLib.py goes DOWN
+Explaining this will get a little rough, I will go over all the functions first
+then just kinda walk through what the code does as I have it written
+
+checkKeys() - gets the input from user - WASD, numpad, enter and space
+getMaxMol() - calculates maximum amount of NAs, Atp, and Residues allowed.
+moveAtpCons() - gets movement speed of cell
+isInBound() - checks if the cell is inside a boundary
+calcAtpRate() - calculates rate ATP is produced
+countOnOff() - counts number of the things onscreen and offscreen
+isOnScreen() - checks if the guy is on screen
+
+-------------
+
+main() - a kind of walkthrough
+
+set initial conditions - whats the FPS, starting number of NA', refractory period
+for proteins, etc... Set up colors and the display.
+
+Initialize cell, all organelles, and all ATP, proteins, rna, bacteria,
+viruses, explosions, and vesicles as arrays, then add them all to the cell for
+quick referencing.
+
+Set up images and protein names for reference
+Set up text objects and text to be referenced for later
+add intro and death screens.
+Create high score, check if a high score exists from a file, if not, nothing
+set up score text objects
+set up the clock and lets go
+
+Game loop:
+check our keys first
+if we are in the intro screen/powerpoint/whatever it is, space moves us from
+one slide to another
+
+if cell is alive and not paused: main game
+
+Arrows are pressed: change the dna picture and alter the corresponding menu text
+if WASD are pressed we move the cell in a direction using dpos. But if the cell
+is outside a boundary, we move the background and all other objects instead.
+We tally up the time the cell moves and kill an atp if it moves over a
+predefined threshold
+
+Check if we can produce rna in the nucleus and do so if we have requirements and
+the cell is alive
+Check if space is pressed and do an explosion if that happens
+Move the background to the center if we go outside the boundary
+
+We then spawn vesicles, viruses, and bacteria according to if the rate allows us
+We have a spawn rate and timme that the last one was spawned
+To inspire carefulness, we spawn the crap out of bacteria if no nucleus exists
+or there are no atp left
+
+Update all sprites
+Update the side menu
+
+Outside main game part --
+
+if the game is paused, we pause
+
+if dead, game over. write to the score file
+if space is pressed we restart and i just reinitialize EVERYTHING because I dont
+want to run any risk of forgetting something stupid
